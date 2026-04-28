@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "UserPublic": {
+      "title": "User Public Profile",
+      "description": "Publicly visible information about a user",
+      "type": "object",
+      "properties": {
+        "userName": { "type": "string", "description": "The display name of the user" },
+        "profileImage": { "type": "string", "description": "URL to the user's profile image" }
+      },
+      "required": ["userName", "profileImage"]
+    },
+    "UserPrivate": {
+      "title": "User Private Data",
+      "description": "Sensitive PII and private settings",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "The user's email address" }
+      },
+      "required": ["email"]
+    },
+    "Transaction": {
+      "title": "Financial Transaction",
+      "description": "A record of income or expense",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Description of the transaction" },
+        "amount": { "type": "number", "description": "Value of the transaction (negative for expenses)" },
+        "category": { "type": "string", "enum": ["food", "transport", "salary", "other"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "userId": { "type": "string", "description": "ID of the user who owns this transaction" }
+      },
+      "required": ["name", "amount", "category", "createdAt", "userId"]
+    },
+    "Goal": {
+      "title": "Savings Goal",
+      "description": "A target to save money for",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the goal" },
+        "target": { "type": "number", "description": "Target amount to save" },
+        "current": { "type": "number", "description": "Current saved amount" },
+        "iconType": { "type": "string", "description": "Type of icon based on CATEGORY_MAP or similar" },
+        "color": { "type": "string", "description": "Tailwind color class" },
+        "userId": { "type": "string", "description": "ID of the user who owns this goal" }
+      },
+      "required": ["title", "target", "current", "iconType", "color", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "description": "Public profile associated with a user",
+      "schema": "UserPublic"
+    },
+    "/users/{userId}/private/info": {
+      "description": "Private PII for a user",
+      "schema": "UserPrivate"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "description": "A collection of transactions belonging to a user",
+      "schema": "Transaction"
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "description": "A collection of goals belonging to a user",
+      "schema": "Goal"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "plugins": ["@firebase/security-rules"],
+  "overrides": [
+    {
+      "files": ["DRAFT_firestore.rules"],
+      "parser": "@firebase/eslint-plugin-security-rules/parser",
+      "rules": {
+        "@firebase/security-rules/no-unprotected-writes": "error",
+        "@firebase/security-rules/no-unprotected-reads": "error"
+      }
+    }
+  ]
+}

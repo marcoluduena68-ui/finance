@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 64 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Phase 4: Validation Blueprints
+    function isValidUser(data) {
+      return data.userName is string && data.userName.size() > 0 && data.userName.size() <= 50
+        && data.profileImage is string && data.profileImage.size() <= 1000000;
+    }
+
+    function isValidTransaction(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.amount is number
+        && data.category in ['food', 'transport', 'salary', 'other']
+        && data.userId == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidGoal(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.target is number && data.target >= 0
+        && data.current is number && data.current >= 0
+        && data.iconType is string && data.iconType.size() <= 50
+        && data.color is string && data.color.size() <= 60
+        && data.userId == request.auth.uid;
+    }
+
+    // Rules for Collections
+    match /users/{userId} {
+      // Path Hardening
+      allow get: if isSignedIn() && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming())
+                   && incoming().diff(existing()).affectedKeys().hasOnly(['userName', 'profileImage']);
+
+      match /private/info {
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && incoming().email == request.auth.token.email;
+      }
+
+      match /transactions/{transactionId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(transactionId);
+        allow create: if isOwner(userId) && isValidId(transactionId) && isValidTransaction(incoming());
+        allow update: if false; 
+        allow delete: if isOwner(userId) && isValidId(transactionId);
+      }
+
+      match /goals/{goalId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(goalId);
+        allow create: if isOwner(userId) && isValidId(goalId) && isValidGoal(incoming());
+        allow update: if isOwner(userId) && isValidId(goalId) && (
+          // Action: Update Progress
+          (incoming().diff(existing()).affectedKeys().hasOnly(['current'])) ||
+          // Action: Rename/Settings
+          (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'target', 'iconType', 'color']))
+        ) && isValidGoal(incoming());
+        allow delete: if isOwner(userId) && isValidId(goalId);
+      }
+    }
+  }
+}
